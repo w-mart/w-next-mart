@@ -3,6 +3,7 @@ import "../style.css"
 
 const UserSignUp = () => {
   const [userType, setUserType] = useState("Distributor");
+  const [message, setMessage] = useState("");
 
   // Distributor fields
   const [distributor_address, setDistributor_address] = useState("");
@@ -16,6 +17,8 @@ const UserSignUp = () => {
   const [distributor_user_name, setDistributor_user_name] = useState("");
   const [gstin_number, setGstin_number] = useState("");
   const [is_distributor_active, setIs_distributor_active] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
 
   // Delivery fields
   const [id, setId] = useState("");
@@ -27,10 +30,82 @@ const UserSignUp = () => {
   const [registered_at, setRegistered_at] = useState("");
   const [vehicle_number, setVehicle_number] = useState("");
   const [vehicle_type, setVehicle_type] = useState("");
+  const [deliveryFirstName, setDeliveryFirstName] = useState("");
+  const [deliveryLastName, setDeliveryLastName] = useState("");
+  const [deliveryPassword, setDeliveryPassword] = useState("");
+  const [deliveryUsername, setDeliveryUsername] = useState("");
 
-  const handleSignup = () => {
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    setMessage("");
     if (userType === "Distributor") {
+      const data = {
+        username: distributor_user_name,
+        email: distributor_email,
+        password: distributor_password_hash,
+        firstName: firstName,
+        lastName: lastName,
+        phone: distributor_contact_number,
+        role: "DISTRIBUTOR",
+        gstinNumber: gstin_number,
+        shopName: distributor_shop_name,
+        address: distributor_address,
+        city: distributor_city,
+        state: distributor_state,
+        pinCode: distributor_pin_code
+      };
+      try {
+        const response = await fetch('http://localhost:8083/api/user/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'accept': '*/*'
+          },
+          body: JSON.stringify(data)
+        });
+        if (response.ok) {
+          setMessage("Signup successful!");
+        } else {
+          const error = await response.text();
+          setMessage("Error: " + error);
+        }
+      } catch (err) {
+        setMessage("Network error: " + err.message);
+      }
     } else {
+      const data = {
+        username: deliveryUsername,
+        email: email,
+        password: deliveryPassword,
+        firstName: deliveryFirstName,
+        lastName: deliveryLastName,
+        phone: mobile,
+        role: "DELIVERY",
+        gstinNumber: "",
+        shopName: "",
+        address: "",
+        city: "",
+        state: "",
+        pinCode: ""
+      };
+      try {
+        const response = await fetch('http://localhost:8083/api/user/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'accept': '*/*'
+          },
+          body: JSON.stringify(data)
+        });
+        if (response.ok) {
+          setMessage("Signup successful!");
+        } else {
+          const error = await response.text();
+          setMessage("Error: " + error);
+        }
+      } catch (err) {
+        setMessage("Network error: " + err.message);
+      }
     }
   };
 
@@ -60,9 +135,11 @@ const UserSignUp = () => {
           </label>
         </div>
 
-        <form className="grid-container" onSubmit={(e) => e.preventDefault()}>
+        <form className="grid-container" onSubmit={handleSignup}>
           {userType === "Distributor" ? (
             <>
+              <input type="text" placeholder="First Name" onChange={(e) => setFirstName(e.target.value)} />
+              <input type="text" placeholder="Last Name" onChange={(e) => setLastName(e.target.value)} />
               <input type="text" placeholder="Shop Name" onChange={(e) => setDistributor_shop_name(e.target.value)} />
               <input type="text" placeholder="Username" onChange={(e) => setDistributor_user_name(e.target.value)} />
               <input type="email" placeholder="Email" onChange={(e) => setDistributor_email(e.target.value)} />
@@ -73,18 +150,24 @@ const UserSignUp = () => {
               <input type="text" placeholder="State" onChange={(e) => setDistributor_state(e.target.value)} />
               <input type="text" placeholder="Pin Code" onChange={(e) => setDistributor_pin_code(e.target.value)} />
               <input type="text" placeholder="GSTIN Number" onChange={(e) => setGstin_number(e.target.value)} />
+              <button type="submit">Sign Up</button>
             </>
           ) : (
             <>
-              <input type="text" placeholder="Name" onChange={(e) => setName(e.target.value)} />
+              <input type="text" placeholder="First Name" onChange={(e) => setDeliveryFirstName(e.target.value)} />
+              <input type="text" placeholder="Last Name" onChange={(e) => setDeliveryLastName(e.target.value)} />
+              <input type="text" placeholder="Username" onChange={(e) => setDeliveryUsername(e.target.value)} />
               <input type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} />
+              <input type="password" placeholder="Password" onChange={(e) => setDeliveryPassword(e.target.value)} />
               <input type="text" placeholder="Mobile" onChange={(e) => setMobile(e.target.value)} />
               <input type="text" placeholder="License Number" onChange={(e) => setLicense_number(e.target.value)} />
               <input type="text" placeholder="Vehicle Number" onChange={(e) => setVehicle_number(e.target.value)} />
               <input type="text" placeholder="Vehicle Type" onChange={(e) => setVehicle_type(e.target.value)} />
+              <button type="submit">Sign Up</button>
             </>
-          )}          
-        </form> 
+          )}
+        </form>
+        {message && <p className="message">{message}</p>}
 
       </div>
 
