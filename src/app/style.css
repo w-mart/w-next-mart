@@ -4,54 +4,8 @@ html, body {
   padding: 0;
   font-family: Arial, sans-serif;
   background: #f4f4f4;
-  min-height: 100vh;
-}
+  /* DEPRECATED - moved to src/app/styles/main.css */
 
-.container {
-  text-align: center;
-  display: flex;
-  justify-content: center;
-  flex-grow: 1;
-  align-items: center;
-}
-
-h1 {
-  margin-bottom: 20px;
-  font-size: 24px;
-  text-align: center;
-}
-
-.login-container {
-  background: linear-gradient(135deg, #4A90E2 0%, #50C9C3 100%);
-  min-height: calc(100vh - 140px); /* Adjust for fixed header and footer */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 40px 20px;
-  position: relative;
-}
-
-
-.login-tile {
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 40px 30px;
-  display: flex;
-  flex-direction: column;
-  max-width: 400px;
-  width: 100%;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-.login-tile:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
-}
-
-.login-tile h1.welcome-title {
-  text-align: center;
   color: #4A90E2;
   margin-bottom: 5px;
   font-size: 1.8rem;

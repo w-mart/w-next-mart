@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import '../../enhanced-table-styles.css';
+/* enhanced-table-styles.css merged into globals.css */
 
 const DraftsPage = () => {
   const [drafts, setDrafts] = useState([]);

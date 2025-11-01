@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import "./RetailerLayout.css";
 import { Bell, Menu, Search, ChevronDown, LogOut, User } from "lucide-react";
 
 const RetailerHeader = ({ onToggle }) => {

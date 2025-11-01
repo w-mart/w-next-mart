@@ -1,12 +1,52 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import '../../enhanced-table-styles.css';
+import { useState, useEffect } from 'react';
+import { Package, PlusCircle, Truck, FileText } from 'lucide-react';
+/* enhanced-table-styles.css consolidated into globals.css */
 
 const AddProduct = () => {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const [inventoryStats, setInventoryStats] = useState({
+    totalProducts: 0,
+    addedToday: 0,
+    lowStock: 0,
+    categories: 0
+  });
+
+  // Fetch real-time inventory stats
+  useEffect(() => {
+    const fetchInventoryStats = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const distributorCode = localStorage.getItem('distributorCode');
+
+        if (!token || !distributorCode) return;
+
+        const response = await fetch(`http://localhost:8081/api/products/stats/${distributorCode}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setInventoryStats({
+            totalProducts: data.totalProducts || 0,
+            addedToday: data.addedToday || 0,
+            lowStock: data.lowStock || 0,
+            categories: data.categories || 0
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch inventory stats:', error);
+      }
+    };
+
+    fetchInventoryStats();
+  }, []);
+
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -101,7 +141,7 @@ const AddProduct = () => {
       const data = await response.json();
       if (response.ok) {
         setMessage('✓ Product added successfully!');
-        setTimeout(() => router.push('/dashboard/inventory'), 600);
+        setTimeout(() => router.push('/distributor/inventory'), 600);
       } else setMessage('✗ Error: ' + (data.message || 'Failed to add'));
     } catch (err) {
       console.error('Add product error:', err);
@@ -112,8 +152,60 @@ const AddProduct = () => {
   };
 
   return (
-    <div className="add-product-page">
-      <div className="form-section">
+    <div className="page-content-tile">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h2 style={{ margin: 0 }}>Add Product</h2>
+          <p style={{ margin: 0, color: "#64748b" }}>Add new products to your inventory</p>
+        </div>
+      </div>
+
+      {/* Summary Tiles */}
+      <section className="summary-cards">
+        <div className="stat-card" >
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Package size={48} />
+            <div>
+              <h4>Total Products</h4>
+              <div className="stat-number">{inventoryStats.totalProducts}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card" >
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <PlusCircle size={48} />
+            <div>
+              <h4>Added Today</h4>
+              <div className="stat-number">{inventoryStats.addedToday}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card" >
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Truck size={48} />
+            <div>
+              <h4>Low Stock</h4>
+              <div className="stat-number">{inventoryStats.lowStock}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card" >
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <FileText size={48} />
+            <div>
+              <h4>Categories</h4>
+              <div className="stat-number">{inventoryStats.categories}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+<br/>
+      {/* Product Details Form Below Stats */}
+      <div className="add-product-page">
+        <div className="form-section">
         <h2>Add Product</h2>
         <div className="steps">
           <span className={step === 1 ? 'active' : ''}>1 Basic Info</span>
@@ -199,22 +291,23 @@ const AddProduct = () => {
             )}
           </div>
         </form>
-        {message && <p className="message">{message}</p>}
-      </div>
+        {message && <p className={`message ${message.startsWith('✓') ? 'success' : 'error'}`}>{message}</p>}
+        </div>
 
-      {/* RIGHT PREVIEW PANEL */}
-      <div className="preview-section">
-        <h3>Live Preview</h3>
-        {preview ? (
-          <img src={preview} alt="Product Preview" className="preview-img-large"/>
-        ) : (
-          <div className="placeholder">No image selected</div>
-        )}
-        <div className="preview-details">
-          <p><strong>{formData.name || 'Product Name'}</strong></p>
-          <p>₹{formData.price || '0.00'}</p>
-          <p>{formData.category || 'Category'}</p>
-          <p>{formData.description || 'Description will appear here.'}</p>
+        {/* RIGHT PREVIEW PANEL */}
+        <div className="preview-section">
+          <h3>Live Preview</h3>
+          {preview ? (
+            <img src={preview} alt="Product Preview" className="preview-img-large"/>
+          ) : (
+            <div className="placeholder">No image selected</div>
+          )}
+          <div className="preview-details">
+            <p><strong>{formData.name || 'Product Name'}</strong></p>
+            <p>₹{formData.price || '0.00'}</p>
+            <p>{formData.category || 'Category'}</p>
+            <p>{formData.description || 'Description will appear here.'}</p>
+          </div>
         </div>
       </div>
     </div>

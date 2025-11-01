@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { TrendingUp, Package } from 'lucide-react';
 
 const Reports = () => {
   const [dateFrom, setDateFrom] = useState('');
@@ -23,18 +24,63 @@ const Reports = () => {
 
   return (
     <div className="page-content-tile">
-      <div className="page-header">
-        <h1>Reports</h1>
+      <header className="inventory-header">
+        <h2>Reports</h2>
         <p>View sales, inventory, and performance reports</p>
-      </div>
-      <div className="actions-bar">
-        <div className="date-filter">
+      </header>
+
+      <section className="summary-cards">
+        <div className="stat-card">
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <TrendingUp size={38} />
+            <div>
+              <h4>Total Sales</h4>
+              <div className="stat-number">${salesData.reduce((sum, data) => sum + data.sales, 0)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <TrendingUp size={38} />
+            <div>
+              <h4>Total Profit</h4>
+              <div className="stat-number">${salesData.reduce((sum, data) => sum + data.profit, 0)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Package size={38} />
+            <div>
+              <h4>Inventory Items</h4>
+              <div className="stat-number">175</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Package size={38} />
+            <div>
+              <h4>Total Orders</h4>
+              <div className="stat-number">45</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="filters">
+        <div className="filter-left">
           <label>From: <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} /></label>
           <label>To: <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} /></label>
         </div>
-        <button className="action-btn export-btn" onClick={handleExport}>Export PDF</button>
-      </div>
-      <div className="reports-grid">
+        <button className="add-product-btn" onClick={handleExport}>
+          Export PDF
+        </button>
+      </section>
+      <div className="reports-section">
         <div className="report-card">
           <h3>Sales Summary</h3>
           <table className="reports-table">
@@ -58,31 +104,64 @@ const Reports = () => {
         </div>
         <div className="report-card">
           <h3>Sales Bar Chart</h3>
-          <div className="bar-chart">
+          <div className="chart-container">
             {salesData.map((data, index) => (
-              <div key={index} className="bar-container">
-                <div className="bar" style={{ height: `${(data.sales / 3000) * 100}%` }}></div>
-                <span className="bar-label">{data.month}</span>
-              </div>
+              <div key={index} className="bar" data-month={data.month} style={{ height: `${(data.sales / 3000) * 100}%` }}></div>
             ))}
           </div>
         </div>
         <div className="report-card">
-          <h3>Inventory Report</h3>
-          <p>Total Items: 175</p>
-          <p>Low Stock Items: 3</p>
-          <p>Expired Items: 0</p>
-          <div className="chart-placeholder">
-            <p>[Placeholder for Inventory Chart]</p>
+          <h4>Inventory Report</h4>
+          <div className="report-stats">
+            <div className="stat">
+              <span className="label">Total Items:</span>
+              <span className="value">175</span>
+            </div>
+            <div className="stat">
+              <span className="label">Low Stock Items:</span>
+              <span className="value">3</span>
+            </div>
+            <div className="stat">
+              <span className="label">Expired Items:</span>
+              <span className="value">0</span>
+            </div>
+          </div>
+          <div className="report-chart">
+            <div className="chart-bar total-items" style={{ width: '100%' }}></div>
+            <div className="chart-bar low-stock" style={{ width: '1.7%' }}></div>
+            <div className="chart-bar expired" style={{ width: '0%' }}></div>
+          </div>
+          <div className="chart-labels">
+            <span>Total Items</span>
+            <span>Low Stock</span>
+            <span>Expired</span>
           </div>
         </div>
         <div className="report-card">
-          <h3>Orders Report</h3>
-          <p>Total Orders: 45</p>
-          <p>Pending: 5</p>
-          <p>Delivered: 40</p>
-          <div className="chart-placeholder">
-            <p>[Placeholder for Orders Chart]</p>
+          <h4>Orders Report</h4>
+          <div className="report-stats">
+            <div className="stat">
+              <span className="label">Total Orders:</span>
+              <span className="value">45</span>
+            </div>
+            <div className="stat">
+              <span className="label">Pending:</span>
+              <span className="value">5</span>
+            </div>
+            <div className="stat">
+              <span className="label">Delivered:</span>
+              <span className="value">40</span>
+            </div>
+          </div>
+          <div className="report-chart">
+            <div className="chart-bar total-orders" style={{ width: '100%' }}></div>
+            <div className="chart-bar pending" style={{ width: '11.1%' }}></div>
+            <div className="chart-bar delivered" style={{ width: '88.9%' }}></div>
+          </div>
+          <div className="chart-labels">
+            <span>Total</span>
+            <span>Pending</span>
+            <span>Delivered</span>
           </div>
         </div>
       </div>

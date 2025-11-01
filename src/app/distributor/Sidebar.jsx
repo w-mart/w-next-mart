@@ -2,13 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingBag, Package, Truck, BarChart3, CreditCard, AlertCircle, Plus, Users, Search } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Truck, BarChart3,Package, Plus,Users,CreditCard,AlertCircle } from 'lucide-react';
 
-// Function to get menu items based on role
-const getMenuItems = (role) => {
-  const baseItems = {
-    DISTRIBUTOR: [
-      { name: 'Dashboard', path: '/distributor', icon: LayoutDashboard, hasNotification: false },
+// Function to get menu items for driver
+const getDISTRIBUTORMenuItems = () => {
+  return [
+    { name: 'Dashboard', path: '/distributor', icon: LayoutDashboard, hasNotification: false },
       { name: 'Orders', path: '/distributor/orders', icon: ShoppingBag, hasNotification: true },
       { name: 'Inventory', path: '/distributor/inventory', icon: Package, hasNotification: true },
       { name: 'Add Product', path: '/distributor/add-product', icon: Plus, hasNotification: false },
@@ -17,39 +16,7 @@ const getMenuItems = (role) => {
       { name: 'Reports', path: '/distributor/reports', icon: BarChart3, hasNotification: true },
       { name: 'Payments', path: '/distributor/payments', icon: CreditCard, hasNotification: false },
       { name: 'Alerts', path: '/distributor/alerts', icon: AlertCircle, hasNotification: true },
-    ],
-    RETAILER: [
-      { name: 'Dashboard', path: '/retailer', icon: LayoutDashboard, hasNotification: false },
-      { name: 'Orders', path: '/retailer/orders', icon: ShoppingBag, hasNotification: true },
-      { name: 'Available Products', path: '/retailer/inventory', icon: Package, hasNotification: true },
-      { name: 'Add Product', path: '/retailer/add-product', icon: Plus, hasNotification: false },
-      { name: 'Delivery', path: '/retailer/delivery', icon: Truck, hasNotification: false },
-      { name: 'Find Distributor', path: '/retailer/find-distributor', icon: Search, hasNotification: false },
-      { name: 'Reports', path: '/retailer/reports', icon: BarChart3, hasNotification: true },
-      { name: 'Payments', path: '/retailer/payments', icon: CreditCard, hasNotification: false },
-      { name: 'Alerts', path: '/retailer/alerts', icon: AlertCircle, hasNotification: true },
-    ],
-    DRIVER: [
-      { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, hasNotification: false },
-      { name: 'Orders', path: '/dashboard/orders', icon: ShoppingBag, hasNotification: true },
-      { name: 'Delivery', path: '/dashboard/delivery', icon: Truck, hasNotification: false },
-      { name: 'Reports', path: '/dashboard/reports', icon: BarChart3, hasNotification: true },
-      { name: 'Alerts', path: '/dashboard/alerts', icon: AlertCircle, hasNotification: true },
-    ],
-    SUPER_ADMIN: [
-      { name: 'Dashboard', path: '/superadmin', icon: LayoutDashboard, hasNotification: false },
-      { name: 'Orders', path: '/superadmin/orders', icon: ShoppingBag, hasNotification: true },
-      { name: 'Inventory', path: '/superadmin/inventory', icon: Package, hasNotification: true },
-      { name: 'Add Product', path: '/superadmin/add-product', icon: Plus, hasNotification: false },
-      { name: 'Delivery', path: '/superadmin/delivery', icon: Truck, hasNotification: false },
-      { name: 'Drivers', path: '/superadmin/drivers', icon: Users, hasNotification: false },
-      { name: 'Reports', path: '/superadmin/reports', icon: BarChart3, hasNotification: true },
-      { name: 'Payments', path: '/superadmin/payments', icon: CreditCard, hasNotification: false },
-      { name: 'Alerts', path: '/superadmin/alerts', icon: AlertCircle, hasNotification: true },
-    ],
-  };
-
-  return baseItems[role] || baseItems['DISTRIBUTOR']; // Default to DISTRIBUTOR if role not found
+    ];
 };
 
 const Sidebar = ({ isOpen }) => {
@@ -58,9 +25,8 @@ const Sidebar = ({ isOpen }) => {
   const [userRole, setUserRole] = useState('DISTRIBUTOR');
 
   useEffect(() => {
-    const role = localStorage.getItem('userRole') || 'DISTRIBUTOR';
-    setUserRole(role);
-    setMenuItems(getMenuItems(role));
+    setMenuItems(getDISTRIBUTORMenuItems());
+    setUserRole('DISTRIBUTOR');
   }, []);
 
   return (

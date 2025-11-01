@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
 import RetailerHeader from './RetailerHeader';
-import './RetailerLayout.css';
 
 export default function RetailerLayout({ children }) {
   const pathname = usePathname();

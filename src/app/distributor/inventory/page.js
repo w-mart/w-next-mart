@@ -1,238 +1,133 @@
 'use client';
-
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import {
-  Menu, Bell, User, Search, Download, AlertTriangle, Package, TrendingUp, Clock,
-  CheckCircle, MoreVertical, Eye, Edit, Trash2, Filter, Calendar, DollarSign,
-  ShoppingBag, BarChart3, Truck, CreditCard, AlertCircle, Plus, X, Zap, Archive
-} from 'lucide-react';
-import '../../enhanced-table-styles.css';
-
-const DEFAULT_PAGE_SIZE = 12;
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation'; // Import for navigation
+/* enhanced-table-styles.css consolidated into globals.css */
+import { PlusCircle, Edit, Trash2, DollarSign, AlertTriangle, Package, TrendingUp } from 'lucide-react';
 
 const Inventory = () => {
-  const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [products, setProducts] = useState([]);
-  const [allProductsRaw, setAllProductsRaw] = useState([]); // original data for chart / filters
+  // --- STATE MANAGEMENT ---
+  const [products, setProducts] = useState([]); // Original list from API
+  const [filteredProducts, setFilteredProducts] = useState([]); // List after filters are applied
+  
+  // Filter states
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [brand, setBrand] = useState('');
+  const [lowStockOnly, setLowStockOnly] = useState(false);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+  
+  // UI/Data Fetching states
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  
+  // Inline editing states
   const [editingRowId, setEditingRowId] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
 
-  // Filters / sorting / pagination
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [brandFilter, setBrandFilter] = useState('');
-  const [lowStockOnly, setLowStockOnly] = useState(false);
-  const [sortBy, setSortBy] = useState('newest'); // newest, price-asc, price-desc
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const router = useRouter(); // Hook for programmatic navigation
 
-  // UI messages
-  const [message, setMessage] = useState('');
-  const messageTimeoutRef = useRef(null);
-
-  // debounce searchTerm -> debouncedSearch
+  // --- DATA FETCHING ---
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 350);
-    return () => clearTimeout(t);
-  }, [searchTerm]);
-
-  // Fetch products
-  const fetchProducts = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) throw new Error('No authentication token found. Please log in.');
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-      const res = await fetch(`${apiUrl}/api/products`, {
-        method: 'GET',
-        headers: { 'accept': '*/*', Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(`Failed to fetch products: ${res.status} ${res.statusText}`);
-      const data = await res.json();
-      const mapped = (data || []).map(item => ({
-        id: item.id,
-        product: item.productName || item.product,
-        quantity: (item.productStockQuantity != null) ? item.productStockQuantity : (item.quantity || 0),
-        priceNumber: (item.productUnitPrice != null) ? item.productUnitPrice : (item.price || 0),
-        price: `₹${((item.productUnitPrice != null) ? item.productUnitPrice : (item.price || 0)).toFixed ? ((item.productUnitPrice != null) ? item.productUnitPrice : (item.price || 0)).toFixed(2) : (item.productUnitPrice || item.price || 0)}`,
-        mfg: item.manufacturingDate || item.mfg || 'N/A',
-        expiry: item.expiryDate || item.expiry || 'N/A',
-        productCode: item.productCode,
-        productBarcode: item.productBarcode,
-        productBrandName: item.productBrandName || item.brand || '',
-        productCategory: item.productCategory || item.category || '',
-        productUnitPrice: item.productUnitPrice || item.unitPrice || 0,
-        productDiscountPercentage: item.productDiscountPercentage || 0,
-        productUnit: item.productUnit || item.unit || '',
-        productActive: item.productActive != null ? item.productActive : true,
-        distributorCode: item.distributorCode,
-        createdAt: item.createdAt || item.created_at || '',
-        updatedAt: item.updatedAt || item.updated_at || '',
-        description: item.description || ''
-      }));
-      setProducts(mapped);
-      setAllProductsRaw(mapped);
-      setPage(1);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    async function fetchProducts() {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          throw new Error('No authentication token found. Please log in.');
+        }
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        const response = await fetch(`${apiUrl}/api/products`, {
+          method: 'GET',
+          headers: {
+            'accept': '*/*',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch products: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+        const mappedProducts = data.map(item => ({
+          id: item.id,
+          product: item.productName,
+          quantity: item.productStockQuantity,
+          price: `₹${item.productUnitPrice.toFixed(2)}`,
+          mfg: item.manufacturingDate || 'N/A',
+          expiry: item.expiryDate || 'N/A',
+          productCode: item.productCode,
+          productBarcode: item.productBarcode,
+          productBrandName: item.productBrandName,
+          productCategory: item.productCategory,
+          productUnitPrice: item.productUnitPrice,
+          // ... (include any other properties you need)
+        }));
+        setProducts(mappedProducts);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
     }
-  };
-
-  // initial fetch
-  useEffect(() => {
     fetchProducts();
   }, []);
 
-  // detect AddProduct redirect via localStorage flag
+  // --- FILTERING LOGIC ---
   useEffect(() => {
-    try {
-      if (localStorage.getItem('productAdded') === 'true') {
-        localStorage.removeItem('productAdded');
-        setMessage('✓ Product added successfully — inventory refreshed.');
-        // clear message after 4s
-        clearTimeout(messageTimeoutRef.current);
-        messageTimeoutRef.current = setTimeout(() => setMessage(''), 4000);
-        fetchProducts();
-      }
-    } catch (e) {
-      // ignore storage errors
-    }
-    return () => clearTimeout(messageTimeoutRef.current);
-  }, []);
+    let filtered = products.filter(p =>
+      (p.product?.toLowerCase().includes(search.toLowerCase()) ?? true) &&
+      (category ? p.productCategory === category : true) &&
+      (brand ? p.productBrandName === brand : true) &&
+      (!lowStockOnly || p.quantity < 50)
+    );
+    setFilteredProducts(filtered);
+    setCurrentPage(1); 
+  }, [search, category, brand, lowStockOnly, products]);
 
-  // computed unique categories & brands for filters
-  const categories = useMemo(() => {
-    const setC = new Set();
-    allProductsRaw.forEach(p => { if (p.productCategory) setC.add(p.productCategory); });
-    return Array.from(setC).sort();
-  }, [allProductsRaw]);
+  // --- PAGINATION LOGIC ---
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
-  const brands = useMemo(() => {
-    const setB = new Set();
-    allProductsRaw.forEach(p => { if (p.productBrandName) setB.add(p.productBrandName); });
-    return Array.from(setB).sort();
-  }, [allProductsRaw]);
-
-  // filter / sort pipeline
-  const filteredSorted = useMemo(() => {
-    let list = products.slice();
-
-    // search across product name, brand, category, expiry, code
-    if (debouncedSearch) {
-      const q = debouncedSearch.toLowerCase();
-      list = list.filter(item =>
-        (item.product && item.product.toLowerCase().includes(q)) ||
-        (item.productBrandName && item.productBrandName.toLowerCase().includes(q)) ||
-        (item.productCategory && item.productCategory.toLowerCase().includes(q)) ||
-        (String(item.expiry || '').toLowerCase().includes(q)) ||
-        (String(item.productCode || '').toLowerCase().includes(q))
-      );
-    }
-
-    if (categoryFilter) list = list.filter(i => i.productCategory === categoryFilter);
-    if (brandFilter) list = list.filter(i => i.productBrandName === brandFilter);
-    if (lowStockOnly) list = list.filter(i => (Number(i.quantity) || 0) < 10);
-
-    // sort
-    if (sortBy === 'price-asc') {
-      list.sort((a, b) => (a.productUnitPrice || a.priceNumber || 0) - (b.productUnitPrice || b.priceNumber || 0));
-    } else if (sortBy === 'price-desc') {
-      list.sort((a, b) => (b.productUnitPrice || b.priceNumber || 0) - (a.productUnitPrice || a.priceNumber || 0));
-    } else if (sortBy === 'oldest') {
-      list.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
-    } else {
-      // newest
-      list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-    }
-
-    return list;
-  }, [products, debouncedSearch, categoryFilter, brandFilter, lowStockOnly, sortBy]);
-
-  // pagination slice
-  const totalPages = Math.max(1, Math.ceil(filteredSorted.length / pageSize));
-  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [totalPages]);
-  const paged = filteredSorted.slice((page - 1) * pageSize, page * pageSize);
-
-  // stats
-  const totalProducts = products.length;
-  const lowStockProducts = products.filter(item => (Number(item.quantity) || 0) < 10).length;
-  const totalInventoryValue = products.reduce((sum, item) => sum + ((Number(item.productUnitPrice) || Number(item.priceNumber) || 0) * (Number(item.quantity) || 0)), 0);
-
-  // chart data: category => total quantity
-  const categoryChart = useMemo(() => {
-    const map = {};
-    products.forEach(p => {
-      const cat = p.productCategory || 'Uncategorized';
-      map[cat] = (map[cat] || 0) + (Number(p.quantity) || 0);
-    });
-    return Object.entries(map).map(([k, v]) => ({ category: k, qty: v })).sort((a, b) => b.qty - a.qty);
-  }, [products]);
-
-  // API helpers
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-
+  // --- CRUD OPERATIONS ---
   const deleteProduct = async (id) => {
-    if (!confirm('Delete this product? This cannot be undone.')) return;
-    const prev = products.slice();
+    if (!window.confirm("Are you sure you want to delete this product?")) {
+        return;
+    }
     try {
-      // optimistic UI remove
-      setProducts(prev.filter(p => p.id !== id));
       const token = localStorage.getItem('authToken');
-      if (!token) throw new Error('No authentication token found. Please log in.');
-      const res = await fetch(`${apiUrl}/api/products/${id}`, {
-        method: 'DELETE',
-        headers: { accept: '*/*', Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(`Failed to delete product: ${res.status} ${res.statusText}`);
-      setMessage('✓ Product deleted');
-      clearTimeout(messageTimeoutRef.current);
-      messageTimeoutRef.current = setTimeout(() => setMessage(''), 3500);
+      setProducts(products.filter(product => product.id !== id));
     } catch (err) {
-      setProducts(prev);
       setError(err.message);
     }
   };
 
-  const updateProduct = async (payload) => {
+  const updateProduct = async (updatedProduct) => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) throw new Error('No authentication token found. Please log in.');
-      const res = await fetch(`${apiUrl}/api/products/${payload.id}`, {
-        method: 'PUT',
-        headers: { accept: '*/*', 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const txt = await res.text().catch(() => '');
-        throw new Error(`Failed to update product: ${res.status} ${res.statusText} ${txt}`);
-      }
-      const updated = await res.json().catch(() => payload);
-      // update in UI
-      setProducts(prev => prev.map(p => p.id === payload.id ? { ...p, ...payload } : p));
+      const updatedProducts = products.map(p =>
+        p.id === updatedProduct.id ? { ...p, ...updatedProduct, price: `₹${updatedProduct.productUnitPrice.toFixed(2)}` } : p
+      );
+      setProducts(updatedProducts);
       setEditingRowId(null);
-      setMessage('✓ Product updated');
-      clearTimeout(messageTimeoutRef.current);
-      messageTimeoutRef.current = setTimeout(() => setMessage(''), 3500);
     } catch (err) {
       setError(err.message);
     }
   };
 
-  // edit flow
-  const handleEdit = (id) => {
-    const pr = products.find(p => p.id === id);
-    if (!pr) return;
-    setEditingRowId(id);
-    setEditingProduct({ ...pr }); // shallow copy
+  // --- EVENT HANDLERS ---
+  const handleAddProduct = () => {
+    router.push('/distributor/add-product');
+  };
+
+  const handleEdit = (product) => {
+    setEditingRowId(product.id);
+    setEditingProduct({ ...product });
+  };
+
+  const handleSaveEdit = () => {
+    updateProduct(editingProduct);
   };
 
   const handleCancelEdit = () => {
@@ -240,279 +135,216 @@ const Inventory = () => {
     setEditingProduct(null);
   };
 
-  const handleSaveEdit = () => {
-    // basic validation
-    if (!editingProduct) return;
-    if (!editingProduct.product || String(editingProduct.product).trim() === '') {
-      setError('Product name required');
-      return;
-    }
-    // ensure numeric fields
-    editingProduct.quantity = Number(editingProduct.quantity) || 0;
-    editingProduct.productUnitPrice = Number(editingProduct.productUnitPrice || editingProduct.priceNumber) || 0;
-    updateProduct(editingProduct);
-  };
-
   const handleFieldChange = (field, value) => {
     setEditingProduct(prev => ({ ...prev, [field]: value }));
   };
-
-  // small helper to clear error message after a while
-  useEffect(() => {
-    if (!error) return;
-    const t = setTimeout(() => setError(null), 7000);
-    return () => clearTimeout(t);
-  }, [error]);
+  
+  if (loading) return <p>Loading inventory...</p>;
+  if (error) return <p className="error-message">Error: {error}</p>;
 
   return (
-    <div className="inventory-page">
-      <div className="page-header">
-        <h1>Inventory</h1>
-        <p>Monitor and manage your stock</p>
-      </div>
+    <div className="page-content-tile">
+      <header className="inventory-header">
+        <h2>Inventory Management</h2>
+        <p>Monitor and manage your stock with intelligence</p>
+      </header>
 
-      <div className="top-grid">
-        <div className="stats-grid">
-          <div className="stat-card">
-            <Package size={20} />
-            <div className="stat-label">Total Products</div>
-            <div className="stat-number">{totalProducts}</div>
-            <div className="stat-sub">Items in stock</div>
-          </div>
-
-          <div className="stat-card warning">
-            <AlertTriangle size={20} />
-            <div className="stat-label">Low Stock</div>
-            <div className="stat-number">{lowStockProducts}</div>
-            <div className="stat-sub">Below threshold (10)</div>
-          </div>
-
-          <div className="stat-card success">
-            <DollarSign size={20} />
-            <div className="stat-label">Total Value</div>
-            <div className="stat-number">₹{totalInventoryValue.toFixed(2)}</div>
-            <div className="stat-sub">Inventory worth</div>
+      {/* --- SUMMARY CARDS --- */}
+			<section className="summary-cards">
+        <div className="stat-card" >
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Package size={48} />
+            <div>
+              <h4>Total Products</h4>
+              <div className="stat-number">{products.length}</div>
+            </div>
           </div>
         </div>
 
-        <div className="chart-card">
-          <div className="chart-header">
-            <BarChart3 size={18} />
-            <h3>Stock by Category</h3>
+        <div className="stat-card" >
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <AlertTriangle size={38} />
+            <div>
+              <h4>Low Stock </h4>
+              <div className="stat-number">{products.filter(p => p.quantity < 50).length}</div>
+            </div>
           </div>
-          <CategoryBarChart data={categoryChart} />
         </div>
-      </div>
 
-      <div className="main-grid">
-        <aside className="filters-panel">
-          <div className="filter-row">
-            <div className="search-inline">
-              <Search size={16} />
-              <input
-                placeholder="Search by name, brand, category or expiry..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+        <div className="stat-card" >
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <DollarSign size={38} />
+            <div>
+              <h4>Inventory Value</h4>
+              <div className="stat-number">₹{products.reduce((sum, p) => sum + p.productUnitPrice * p.quantity, 0).toLocaleString()}</div>
             </div>
           </div>
+        </div>
 
-          <div className="filter-row">
-            <label>Category</label>
-            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-              <option value="">All categories</option>
-              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-
-          <div className="filter-row">
-            <label>Brand</label>
-            <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)}>
-              <option value="">All brands</option>
-              {brands.map(b => <option key={b} value={b}>{b}</option>)}
-            </select>
-          </div>
-
-          <div className="filter-row row-inline">
-            <label>
-              <input type="checkbox" checked={lowStockOnly} onChange={(e) => setLowStockOnly(e.target.checked)} />
-              {' '}Low stock only
-            </label>
-            <label>
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                <option value="newest">Newest</option>
-                <option value="oldest">Oldest</option>
-                <option value="price-asc">Price: Low → High</option>
-                <option value="price-desc">Price: High → Low</option>
-              </select>
-            </label>
-          </div>
-
-          <div className="filter-row actions">
-            <button className="btn secondary" onClick={() => { setSearchTerm(''); setCategoryFilter(''); setBrandFilter(''); setLowStockOnly(false); setSortBy('newest'); }}>
-              Reset
-            </button>
-            <Link href="/dashboard/add-product">
-              <button className="btn primary">
-                <Plus size={16} /> Add Product
-              </button>
-            </Link>
-          </div>
-
-          <div className="filter-row small-note">
-            <small>Showing {filteredSorted.length} result(s)</small>
-          </div>
-        </aside>
-
-        <section className="table-section">
-          {loading && (
-            <div className="loading">
-              <Zap size={20} /> Loading inventory...
-            </div>
-          )}
-
-          {message && <div className="toast success">{message} <button onClick={() => setMessage('')} className="toast-close"><X size={14} /></button></div>}
-          {error && <div className="toast error">Error: {error} <button onClick={() => setError(null)} className="toast-close"><X size={14} /></button></div>}
-
-          {!loading && !error && (
-            <>
-              <div className="table-controls">
-                <div>
-                  <label>Page size:</label>
-                  <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}>
-                    <option value={6}>6</option>
-                    <option value={12}>12</option>
-                    <option value={24}>24</option>
-                    <option value={48}>48</option>
-                  </select>
-                </div>
-
-                <div className="pagination-controls">
-                  <button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</button>
-                  <span>Page {page} / {totalPages}</span>
-                  <button className="page-btn" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</button>
-                </div>
+        <div className="stat-card" >
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <TrendingUp size={38} />
+            <div>
+              <h4>Category</h4>
+              <div className="stat-number">
+                {products.length > 0
+                  ? (() => {
+                      const categoryCount = products.reduce((acc, p) => {
+                        acc[p.productCategory] = (acc[p.productCategory] || 0) + 1;
+                        return acc;
+                      }, {});
+                      const topCategory = Object.keys(categoryCount).reduce((a, b) =>
+                        categoryCount[a] > categoryCount[b] ? a : b
+                      );
+                      return topCategory || 'N/A';
+                    })()
+                  : 'N/A'
+                }
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-              <table className="inventory-table">
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>Brand</th>
-                    <th>Category</th>
-                    <th>Stock</th>
-                    <th>Price</th>
-                    <th>MFG</th>
-                    <th>Expiry</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paged.map((item) => (
-                    <tr key={item.id} className={(Number(item.quantity) || 0) < 10 ? 'low-stock-row' : ''}>
-                      <td>
-                        {editingRowId === item.id ? (
-                          <input value={editingProduct.product} onChange={e => handleFieldChange('product', e.target.value)} className="edit-input"/>
+      {/* --- FILTERS --- */}
+<section className="filters">
+  <div className="filter-left">
+    <input
+      type="text"
+      placeholder="Search by product name..."
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+    />
+
+    <select value={category} onChange={(e) => setCategory(e.target.value)}>
+      <option value="">All Categories</option>
+      {[...new Set(products.map(p => p.productCategory).filter(Boolean))].map(
+        (cat) => (
+          <option key={cat} value={cat}>
+            {cat}
+          </option>
+        )
+      )}
+    </select>
+
+    <select value={brand} onChange={(e) => setBrand(e.target.value)}>
+      <option value="">All Brands</option>
+      {[...new Set(products.map(p => p.productBrandName).filter(Boolean))].map(
+        (br) => (
+          <option key={br} value={br}>
+            {br}
+          </option>
+        )
+      )}
+    </select>
+
+    <button
+      className={`low-stock-btn ${lowStockOnly ? 'active' : ''}`}
+      onClick={() => setLowStockOnly(!lowStockOnly)}
+    >
+      Show low stock only
+    </button>
+  </div>
+
+  <button className="add-product-btn" onClick={handleAddProduct}>
+    <PlusCircle size={18} /> Add Product
+  </button>
+</section>
+
+
+      {/* --- PRODUCT TABLE --- */}
+      <div className="table-container" style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', overflow: 'hidden', border: '1px solid #e9ecef', marginTop: '20px' }}>
+        <table className="orders-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+            <tr>
+              <th style={{ padding: '16px 12px', textAlign: 'center', fontWeight: 'bold', color: '#495057', borderRight: '1px solid #dee2e6' }}>S.No</th>
+              <th style={{ padding: '16px 12px', textAlign: 'left', fontWeight: 'bold', color: '#495057', borderRight: '1px solid #dee2e6' }}>Product</th>
+              <th style={{ padding: '16px 12px', textAlign: 'center', fontWeight: 'bold', color: '#495057', borderRight: '1px solid #dee2e6' }}>Quantity</th>
+              <th style={{ padding: '16px 12px', textAlign: 'center', fontWeight: 'bold', color: '#495057', borderRight: '1px solid #dee2e6' }}>Price</th>
+              <th style={{ padding: '16px 12px', textAlign: 'center', fontWeight: 'bold', color: '#495057', borderRight: '1px solid #dee2e6' }}>MFG Date</th>
+              <th style={{ padding: '16px 12px', textAlign: 'center', fontWeight: 'bold', color: '#495057', borderRight: '1px solid #dee2e6' }}>Expiry Date</th>
+              <th style={{ padding: '16px 12px', textAlign: 'center', fontWeight: 'bold', color: '#495057' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedProducts.length > 0 ? (
+              paginatedProducts.map((item, index) => {
+                const isEditing = editingRowId === item.id;
+                const serialNumber = (currentPage - 1) * itemsPerPage + index + 1;
+                return (
+                  <tr key={`${item.id}-${index}`} style={{ borderBottom: '1px solid #f1f3f4', transition: 'background-color 0.2s ease', cursor: 'pointer' }} onMouseEnter={(e) => e.target.closest('tr').style.backgroundColor = '#f8f9fa'} onMouseLeave={(e) => e.target.closest('tr').style.backgroundColor = 'transparent'}>
+                    <td style={{ padding: '14px 12px', textAlign: 'center', borderRight: '1px solid #f1f3f4' }}>
+                      {serialNumber}
+                    </td>
+                    <td style={{ padding: '14px 12px', textAlign: 'left', borderRight: '1px solid #f1f3f4' }}>
+                      {isEditing ? (
+                        <input type="text" value={editingProduct.product} onChange={(e) => handleFieldChange('product', e.target.value)} />
+                      ) : (
+                        item.product
+                      )}
+                    </td>
+                    <td style={{ padding: '14px 12px', textAlign: 'center', borderRight: '1px solid #f1f3f4', fontWeight: '600', color: item.quantity < 10 ? '#dc3545' : '#212529' }}>
+                      {isEditing ? (
+                        <input type="number" value={editingProduct.quantity} onChange={(e) => handleFieldChange('quantity', parseInt(e.target.value, 10))} />
+                      ) : (
+                        item.quantity
+                      )}
+                    </td>
+                    <td style={{ padding: '14px 12px', textAlign: 'center', borderRight: '1px solid #f1f3f4' }}>
+                      {isEditing ? (
+                        <input type="number" step="0.01" value={editingProduct.productUnitPrice} onChange={(e) => handleFieldChange('productUnitPrice', parseFloat(e.target.value))} />
+                      ) : (
+                        `₹${item.price}`
+                      )}
+                    </td>
+                    <td style={{ padding: '14px 12px', textAlign: 'center', borderRight: '1px solid #f1f3f4' }}>
+                       {isEditing ? (
+                        <input type="date" value={editingProduct.mfg} onChange={(e) => handleFieldChange('mfg', e.target.value)} />
+                      ) : (
+                        item.mfg
+                      )}
+                    </td>
+                    <td style={{ padding: '14px 12px', textAlign: 'center', borderRight: '1px solid #f1f3f4' }}>
+                       {isEditing ? (
+                        <input type="date" value={editingProduct.expiry} onChange={(e) => handleFieldChange('expiry', e.target.value)} />
+                      ) : (
+                        item.expiry
+                      )}
+                    </td>
+                    <td style={{ padding: '14px 12px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        {isEditing ? (
+                          <>
+                            <button className="action-btn save" onClick={handleSaveEdit}>Save</button>
+                            <button className="action-btn cancel" onClick={handleCancelEdit}>Cancel</button>
+                          </>
                         ) : (
-                          <div className="product-cell">
-                            <Package size={16} />
-                            <div className="pmeta">
-                              <div className="pname">{item.product}</div>
-                              <div className="psub">{item.description ? (item.description.slice(0, 80) + (item.description.length > 80 ? '…' : '')) : ''}</div>
-                            </div>
-                          </div>
+                          <>
+                            <button className="action-btn edit" onClick={() => handleEdit(item)}>Edit</button>
+                            <button className="action-btn delete" onClick={() => deleteProduct(item.id)}>Delete</button>
+                          </>
                         )}
-                      </td>
-
-                      <td>{editingRowId === item.id ? (
-                        <input value={editingProduct.productBrandName} onChange={e => handleFieldChange('productBrandName', e.target.value)} className="edit-input" />
-                      ) : item.productBrandName}</td>
-
-                      <td>{editingRowId === item.id ? (
-                        <input value={editingProduct.productCategory} onChange={e => handleFieldChange('productCategory', e.target.value)} className="edit-input" />
-                      ) : item.productCategory}</td>
-
-                      <td className={(Number(item.quantity) || 0) < 10 ? 'low-stock' : ''}>
-                        {editingRowId === item.id ? (
-                          <input type="number" value={editingProduct.quantity} onChange={e => handleFieldChange('quantity', Number(e.target.value))} className="edit-input small"/>
-                        ) : <span>{item.quantity}</span>}
-                      </td>
-
-                      <td>
-                        {editingRowId === item.id ? (
-                          <input type="number" step="0.01" value={editingProduct.productUnitPrice} onChange={e => handleFieldChange('productUnitPrice', Number(e.target.value))} className="edit-input small"/>
-                        ) : <div className="price-cell"><DollarSign size={12} /> ₹{Number(item.productUnitPrice || item.priceNumber || 0).toFixed(2)}</div>}
-                      </td>
-
-                      <td>{item.mfg}</td>
-                      <td>{item.expiry}</td>
-
-                      <td>
-                        <div className="actions-cell">
-                          {editingRowId === item.id ? (
-                            <>
-                              <button className="action-btn save" onClick={handleSaveEdit}><CheckCircle size={14} /> Save</button>
-                              <button className="action-btn cancel" onClick={handleCancelEdit}><X size={14} /> Cancel</button>
-                            </>
-                          ) : (
-                            <>
-                              <button className="action-btn edit" onClick={() => handleEdit(item.id)}><Edit size={14} /> Edit</button>
-                              {(Number(item.quantity) || 0) < 10 && <button className="action-btn reorder"><TrendingUp size={14} /> Reorder</button>}
-                              <button className="action-btn delete" onClick={() => deleteProduct(item.id)}><Trash2 size={14} /> Delete</button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* fallback when no results */}
-              {filteredSorted.length === 0 && <div className="no-results">No products found with current filters.</div>}
-
-              <div className="bottom-pagination">
-                <span>Showing {(filteredSorted.length === 0) ? 0 : ((page - 1) * pageSize) + 1} - {Math.min(page * pageSize, filteredSorted.length)} of {filteredSorted.length}</span>
-                <div>
-                  <button className="page-btn" disabled={page <= 1} onClick={() => setPage(1)}>First</button>
-                  <button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</button>
-                  <button className="page-btn" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</button>
-                  <button className="page-btn" disabled={page >= totalPages} onClick={() => setPage(totalPages)}>Last</button>
-                </div>
-              </div>
-            </>
-          )}
-        </section>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '14px 12px' }}>No products found.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+        <div className="pagination" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', padding: '16px', backgroundColor: '#f8f9fa', borderTop: '1px solid #dee2e6' }}>
+          <button disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)} style={{ padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', transition: 'background-color 0.3s ease' }}>Previous</button>
+          <span>Page {currentPage} of {totalPages || 1}</span>
+          <button disabled={currentPage === totalPages || totalPages === 0} onClick={() => setCurrentPage(currentPage + 1)} style={{ padding: '8px 16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', transition: 'background-color 0.3s ease' }}>Next</button>
+        </div>
       </div>
+
     </div>
   );
 };
 
 export default Inventory;
-
-/* -------------------------
-   Small inline components
-   ------------------------- */
-
-function CategoryBarChart({ data }) {
-  // simple SVG horizontal bar chart
-  const max = Math.max(1, ...data.map(d => d.qty));
-  const shown = data.slice(0, 6); // show top 6 categories
-  return (
-    <div className="cat-chart">
-      {shown.length === 0 && <div className="placeholder">No data yet</div>}
-      {shown.map((d) => {
-        const pct = Math.round((d.qty / max) * 100);
-        return (
-          <div key={d.category} className="cat-row">
-            <div className="cat-name">{d.category}</div>
-            <div className="cat-bar-wrap">
-              <div className="cat-bar" style={{ width: `${pct}%` }} />
-            </div>
-            <div className="cat-val">{d.qty}</div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
